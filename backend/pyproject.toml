@@ -1,0 +1,25 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "FastAPI backend for the RAG system milestone 1"
+readme = "README.md"
+authors = [
+    { name = "khurram bhutto", email = "khurrambhutto071@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "clerk-backend-api>=5.0.6",
+    "fastapi>=0.135.2",
+    "httpx>=0.28.1",
+    "litellm>=1.82.6",
+    "pydantic-settings>=2.13.1",
+    "sse-starlette>=3.3.4",
+    "uvicorn[standard]>=0.42.0",
+]
+
+[project.scripts]
+backend = "backend.main:main"
+
+[build-system]
+requires = ["uv_build>=0.10.4,<0.11.0"]
+build-backend = "uv_build"
