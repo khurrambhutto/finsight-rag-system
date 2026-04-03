@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator
 
 import httpx
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sse_starlette import EventSourceResponse, JSONServerSentEvent
 
 from backend.core.auth import get_current_user
@@ -132,6 +132,19 @@ async def get_chat_thread(
     except KeyError as exc:
         raise HTTPException(status_code=404, detail="Chat thread not found.") from exc
     return ChatThreadDetail.model_validate(thread)
+
+
+@router.delete("/chat/threads/{thread_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_chat_thread(
+    thread_id: str,
+    user: AuthenticatedUser = Depends(get_current_user),
+    store: ChatStore = Depends(_get_chat_store),
+) -> Response:
+    try:
+        store.delete_thread(user_id=user.user_id, thread_id=thread_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Chat thread not found.") from exc
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 @router.post("/chat/threads/{thread_id}/stream")

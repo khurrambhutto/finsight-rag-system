@@ -155,6 +155,25 @@ export async function fetchChatThread(threadId: string, getToken: TokenGetter) {
   return response.json() as Promise<ChatThreadDetail>
 }
 
+export async function deleteChatThread(threadId: string, getToken: TokenGetter) {
+  const response = await fetch(
+    `${import.meta.env.VITE_API_URL ?? 'http://localhost:8000'}/chat/threads/${threadId}`,
+    {
+      method: 'DELETE',
+      headers: await getAuthHeaders(getToken),
+    },
+  )
+
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({}))
+    const detail =
+      typeof (payload as { detail?: string }).detail === 'string'
+        ? (payload as { detail: string }).detail
+        : 'Failed to delete chat.'
+    throw new Error(detail)
+  }
+}
+
 type SseEvent = {
   event: string
   data: Record<string, string>

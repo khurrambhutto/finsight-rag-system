@@ -236,6 +236,12 @@
     min-height: 0;
 }
 
+.thread-row {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+}
+
 .thread-list-empty {
     margin: 0;
     padding: 8px 10px;
@@ -249,7 +255,7 @@
     flex-direction: column;
     align-items: stretch;
     gap: 4px;
-    width: 100%;
+    flex: 1;
     padding: 9px 10px;
     border: 1px solid transparent;
     border-radius: var(--radius-sm);
@@ -272,6 +278,39 @@
     background: var(--surface-2);
     border-color: var(--border);
     color: var(--text-1);
+}
+
+.thread-delete-btn {
+    width: 34px;
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--text-3);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        border-color 0.15s,
+        color 0.15s;
+}
+
+.thread-delete-btn:hover {
+    background: rgba(239, 68, 68, 0.08);
+    border-color: rgba(239, 68, 68, 0.18);
+    color: #dc2626;
+}
+
+.thread-delete-btn:focus-visible {
+    outline: none;
+    border-color: rgba(239, 68, 68, 0.28);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14);
+}
+
+.thread-delete-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .thread-link-title {
@@ -596,28 +635,94 @@
 .composer-area {
     flex-shrink: 0;
     padding: 12px 24px 20px;
-    max-width: 680px;
+    max-width: min(800px, 100%);
     width: 100%;
     margin: 0 auto;
+    position: relative;
+    overflow: visible;
+    z-index: 1;
 }
 
-.composer {
+/* Pill composer: text fills the top band; + / model / send on a bottom row (matches multiline refs) */
+.composer-bar {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: 10px;
-    padding: 12px 14px 10px;
+    gap: 12px;
+    padding: 14px 14px 12px 16px;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: var(--radius-lg);
-    transition: border-color 0.2s;
+    border-radius: 28px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+    overflow: visible;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s;
 }
 
-.composer-toolbar {
+.composer-add-btn {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 999px;
+    background: var(--surface-3);
+    color: var(--text-2);
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        color 0.15s,
+        transform 0.1s;
+}
+
+.composer-add-btn:hover:not(:disabled) {
+    background: var(--surface-2);
+    color: var(--text-1);
+}
+
+.composer-add-btn:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+}
+
+.composer-add-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.composer-field {
+    width: 100%;
+    min-width: 0;
+}
+
+.composer-footer {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    min-height: 36px;
+}
+
+.composer-footer-spacer {
+    flex: 1;
+    min-width: 0;
+}
+
+.composer-trail {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
+    justify-content: flex-end;
+    gap: 8px;
+    max-width: min(52vw, 340px);
+}
+
+.composer-trail .model-picker-wrap {
+    max-width: min(240px, calc(52vw - 52px));
+    min-width: 0;
 }
 
 /* Model picker (chat composer) */
@@ -630,7 +735,7 @@
 }
 
 .model-picker-wrap--open {
-    z-index: 50;
+    z-index: 100;
 }
 
 .composer-model-pill {
@@ -689,12 +794,8 @@
     transform: rotate(180deg);
 }
 
+/* Position (fixed + inset) is applied inline — portal renders under document.body */
 .model-picker-popover {
-    position: absolute;
-    bottom: calc(100% + 10px);
-    left: 0;
-    width: min(440px, calc(100vw - 32px));
-    max-height: min(520px, 58vh);
     display: flex;
     flex-direction: column;
     background: var(--surface-2);
@@ -967,55 +1068,72 @@
     border-color: var(--border-2);
 }
 
-.composer:focus-within {
+.composer-bar:focus-within {
     border-color: var(--border-2);
+    box-shadow:
+        0 1px 2px rgba(0, 0, 0, 0.12),
+        0 0 0 1px rgba(255, 255, 255, 0.04);
 }
 
-.composer textarea {
-    flex: 1;
+.composer-bar textarea {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
     background: transparent;
     border: none;
     outline: none;
     color: var(--text-1);
-    font-size: 14.5px;
-    line-height: 1.6;
-    min-height: 24px;
-    max-height: 180px;
+    font-size: 15px;
+    line-height: 1.5;
+    min-height: 26px;
+    max-height: min(360px, 45vh);
     overflow-y: auto;
-    padding: 0;
+    padding: 2px 4px 4px 0;
+    margin: 0;
+    resize: none;
 }
 
-.composer textarea::placeholder {
+.composer-bar textarea::placeholder {
     color: var(--text-3);
 }
 
-.composer textarea::-webkit-scrollbar {
+.composer-bar textarea::-webkit-scrollbar {
     width: 3px;
 }
 
-.composer textarea::-webkit-scrollbar-thumb {
+.composer-bar textarea::-webkit-scrollbar-thumb {
     background: var(--surface-3);
+}
+
+.composer-trail .composer-model-pill {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid transparent;
+}
+
+.composer-trail .composer-model-pill:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
 }
 
 .send-btn {
     flex-shrink: 0;
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radius-sm);
-    background: var(--accent);
-    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    background: #f4f4f5;
+    color: #18181b;
     display: grid;
     place-items: center;
     cursor: pointer;
     transition:
         background 0.15s,
+        color 0.15s,
         opacity 0.15s,
         transform 0.1s;
     border: none;
 }
 
 .send-btn:hover:not(:disabled) {
-    background: #6366f1;
+    background: #ffffff;
     transform: translateY(-1px);
 }
 
@@ -1410,6 +1528,16 @@
 
     .composer-area {
         padding: 8px 16px 16px;
+    }
+
+    .composer-bar {
+        gap: 10px;
+        padding: 12px 12px 10px 14px;
+        border-radius: 24px;
+    }
+
+    .composer-trail {
+        max-width: min(58vw, 300px);
     }
 
     .settings-page {

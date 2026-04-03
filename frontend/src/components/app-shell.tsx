@@ -6,11 +6,11 @@ import {
   useAuth,
   useUser,
 } from "@clerk/react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom";
 
-import { fetchChatThreads } from "../lib/api";
+import { deleteChatThread, fetchChatThreads } from "../lib/api";
 import { OllamaModelProvider } from "../lib/ollama-model-context";
 
 const navItems = [{ to: "/app/chat", label: "Chat" }];
@@ -67,10 +67,23 @@ function AppShellLayout() {
   const { getToken } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const queryClient = useQueryClient();
   const { user } = useUser();
   const threadsQuery = useQuery({
     queryKey: ["chatThreads"],
     queryFn: () => fetchChatThreads(() => getToken()),
+  });
+  const deleteThreadMutation = useMutation({
+    mutationFn: (threadId: string) => deleteChatThread(threadId, () => getToken()),
+    onSuccess: async (_, threadId) => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["chatThreads"] }),
+        queryClient.removeQueries({ queryKey: ["chatThread", threadId] }),
+      ]);
+      if (location.pathname === `/app/chat/${threadId}`) {
+        await navigate("/app/chat");
+      }
+    },
   });
   const displayName =
     user?.firstName ||
@@ -79,6 +92,22 @@ function AppShellLayout() {
 
   function handleNewChat() {
     void navigate("/app/chat");
+  }
+
+  async function handleDeleteThread(threadId: string, title: string) {
+    const confirmed = window.confirm(`Delete "${title}"? This cannot be undone.`);
+
+    if (!confirmed || deleteThreadMutation.isPending) {
+      return;
+    }
+
+    try {
+      await deleteThreadMutation.mutateAsync(threadId);
+    } catch (error) {
+      window.alert(
+        error instanceof Error ? error.message : "Failed to delete chat.",
+      );
+    }
   }
 
   return (
@@ -146,18 +175,40 @@ function AppShellLayout() {
               <p className="thread-list-empty">Loading chats...</p>
             ) : threadsQuery.data?.length ? (
               threadsQuery.data.map((thread) => (
-                <button
+                <div
                   key={thread.id}
-                  type="button"
-                  className={`thread-link${location.pathname === `/app/chat/${thread.id}` ? " active" : ""}`}
-                  onClick={() => void navigate(`/app/chat/${thread.id}`)}
-                  title={thread.title}
+                  className={`thread-row${location.pathname === `/app/chat/${thread.id}` ? " active" : ""}`}
                 >
-                  <span className="thread-link-title">{thread.title}</span>
-                  <span className="thread-link-preview">
-                    {thread.preview ?? "No messages yet"}
-                  </span>
-                </button>
+                  <button
+                    type="button"
+                    className={`thread-link${location.pathname === `/app/chat/${thread.id}` ? " active" : ""}`}
+                    onClick={() => void navigate(`/app/chat/${thread.id}`)}
+                    title={thread.title}
+                  >
+                    <span className="thread-link-title">{thread.title}</span>
+                    <span className="thread-link-preview">
+                      {thread.preview ?? "No messages yet"}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    className="thread-delete-btn"
+                    aria-label={`Delete chat ${thread.title}`}
+                    title="Delete chat"
+                    disabled={deleteThreadMutation.isPending}
+                    onClick={() => void handleDeleteThread(thread.id, thread.title)}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden>
+                      <path
+                        d="M2.75 4h8.5M5.25 2.5h3.5M5.5 6v3.5M8.5 6v3.5M3.75 4l.4 6.1a1 1 0 0 0 1 .9h3.7a1 1 0 0 0 1-.9l.4-6.1"
+                        stroke="currentColor"
+                        strokeWidth="1.25"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </div>
               ))
             ) : (
               <p className="thread-list-empty">No saved chats yet.</p>

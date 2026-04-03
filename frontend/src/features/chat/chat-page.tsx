@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useAuth, useUser } from "@clerk/react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
@@ -10,7 +10,7 @@ import {
   type ChatMessage,
 } from "../../lib/api";
 import { useOllamaModel } from "../../lib/ollama-model-context";
-import { displayModelId, ModelPicker } from "./model-picker";
+import { ModelPicker } from "./model-picker";
 
 const starterPrompts = [
   "Summarize how this milestone is set up.",
@@ -36,6 +36,14 @@ export function ChatPage() {
   const streamGenRef = useRef(0);
   const skipThreadResetRef = useRef<string | null>(null);
 
+  const resizeTextarea = useCallback(() => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const cap = Math.min(360, Math.round(window.innerHeight * 0.45));
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, cap)}px`;
+  }, []);
+
   const threadQuery = useQuery({
     queryKey: ["chatThread", threadId],
     queryFn: () => fetchChatThread(threadId!, () => getToken()),
@@ -58,6 +66,15 @@ export function ChatPage() {
     }
   }, [threadId]);
 
+  useLayoutEffect(() => {
+    resizeTextarea();
+  }, [input, resizeTextarea]);
+
+  useEffect(() => {
+    window.addEventListener("resize", resizeTextarea);
+    return () => window.removeEventListener("resize", resizeTextarea);
+  }, [resizeTextarea]);
+
   useEffect(() => {
     if (!threadId || !threadQuery.data || messages.length > 0) {
       return;
@@ -69,13 +86,6 @@ export function ChatPage() {
     user?.firstName ||
     user?.primaryEmailAddress?.emailAddress?.split("@")[0] ||
     "You";
-
-  function resizeTextarea() {
-    const el = textareaRef.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${Math.min(el.scrollHeight, 180)}px`;
-  }
 
   function scrollToBottom() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -186,6 +196,14 @@ export function ChatPage() {
     }
   }
 
+  const composerHint = isStreaming
+    ? "Generating response…"
+    : listsError
+      ? listsError.message
+      : selectedModel
+        ? null
+        : "Choose an Ollama model from the picker in the input.";
+
   return (
     <div className="chat-page">
       {threadId && threadQuery.isLoading && messages.length === 0 ? (
@@ -257,61 +275,73 @@ export function ChatPage() {
       {/* Composer */}
       <div className="composer-area">
         <form
-          className="composer"
+          className="composer-bar"
           onSubmit={(e) => {
             e.preventDefault();
             void handleSubmit();
           }}
         >
-          <textarea
-            ref={textareaRef}
-            value={input}
-            rows={1}
-            placeholder="Message the assistant… (Enter to send, Shift+Enter for newline)"
-            onChange={(e) => {
-              setInput(e.target.value);
-              resizeTextarea();
-            }}
-            onKeyDown={handleKeyDown}
-          />
-          <div className="composer-toolbar">
-            <ModelPicker
-              models={models}
-              selectedModel={selectedModel}
-              onSelect={setSelectedModel}
-              disabled={isStreaming}
-              isLoading={isLoading}
-              listError={listsError}
+          <div className="composer-field">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              rows={1}
+              placeholder="Message…"
+              title="Enter to send · Shift+Enter for new line"
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
             />
+          </div>
+          <div className="composer-footer">
             <button
-              type="submit"
-              className="send-btn"
-              disabled={isStreaming || !input.trim()}
-              aria-label="Send message"
+              type="button"
+              className="composer-add-btn"
+              disabled={isStreaming}
+              aria-label="Add"
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
                 <path
-                  d="M7 11.5V2.5M3 6.5L7 2.5L11 6.5"
+                  d="M9 4v10M4 9h10"
                   stroke="currentColor"
                   strokeWidth="1.75"
                   strokeLinecap="round"
-                  strokeLinejoin="round"
                 />
               </svg>
             </button>
+            <div className="composer-footer-spacer" aria-hidden />
+            <div className="composer-trail">
+              <ModelPicker
+                models={models}
+                selectedModel={selectedModel}
+                onSelect={setSelectedModel}
+                disabled={isStreaming}
+                isLoading={isLoading}
+                listError={listsError}
+              />
+              <button
+                type="submit"
+                className="send-btn"
+                disabled={isStreaming || !input.trim()}
+                aria-label="Send message"
+              >
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path
+                    d="M7 11.5V2.5M3 6.5L7 2.5L11 6.5"
+                    stroke="currentColor"
+                    strokeWidth="1.75"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </form>
 
         <div className="composer-meta">
-          <p className="composer-hint">
-            {isStreaming
-              ? "Generating response…"
-              : listsError
-                ? listsError.message
-                : selectedModel
-                  ? `Using ${displayModelId(selectedModel)}`
-                  : "Choose an Ollama model from the picker in the input."}
-          </p>
+          {composerHint != null && composerHint !== "" && (
+            <p className="composer-hint">{composerHint}</p>
+          )}
           {error && <p className="status-error">{error}</p>}
         </div>
       </div>

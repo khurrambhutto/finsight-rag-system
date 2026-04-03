@@ -204,6 +204,17 @@ class ChatStore:
             "created_at": now,
         }
 
+    def delete_thread(self, *, user_id: str, thread_id: str) -> None:
+        self._require_thread(user_id=user_id, thread_id=thread_id)
+        with self._connect() as connection:
+            connection.execute(
+                """
+                DELETE FROM chat_threads
+                WHERE id = ? AND user_id = ?
+                """,
+                (thread_id, user_id),
+            )
+
     def _require_thread(self, *, user_id: str, thread_id: str) -> sqlite3.Row:
         with self._connect() as connection:
             row = connection.execute(

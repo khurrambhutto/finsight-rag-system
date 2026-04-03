@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { createPortal } from "react-dom";
 
 const FAVORITES_KEY = "rag-system.model-favorites";
 
@@ -73,8 +81,15 @@ export function ModelPicker({
   listError = null,
 }: ModelPickerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [open, setOpen] = useState(false);
+  const [popoverBox, setPopoverBox] = useState<{
+    bottom: number;
+    right: number;
+    width: number;
+    maxHeight: number;
+  } | null>(null);
   const [search, setSearch] = useState("");
   const [sidebar, setSidebar] = useState<SidebarMode>("all");
   const [favoriteIds, setFavoriteIds] = useState<string[]>(loadFavoriteIds);
@@ -103,10 +118,40 @@ export function ModelPicker({
     return () => window.clearTimeout(t);
   }, [open]);
 
+  const updatePopoverPosition = useCallback(() => {
+    const el = rootRef.current;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const gap = 10;
+    setPopoverBox({
+      bottom: window.innerHeight - r.top + gap,
+      right: window.innerWidth - r.right,
+      width: Math.min(440, window.innerWidth - 24),
+      maxHeight: Math.min(520, window.innerHeight * 0.58),
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPopoverBox(null);
+      return;
+    }
+    updatePopoverPosition();
+    window.addEventListener("resize", updatePopoverPosition);
+    document.addEventListener("scroll", updatePopoverPosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePopoverPosition);
+      document.removeEventListener("scroll", updatePopoverPosition, true);
+    };
+  }, [open, updatePopoverPosition]);
+
   useEffect(() => {
     if (!open) return;
     function onDoc(e: MouseEvent) {
-      if (rootRef.current?.contains(e.target as Node)) return;
+      const t = e.target as Node;
+      if (rootRef.current?.contains(t) || popoverRef.current?.contains(t)) {
+        return;
+      }
       setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
@@ -182,13 +227,25 @@ export function ModelPicker({
         </span>
       </button>
 
-      {open && !isTriggerDisabled && (
-        <div
-          className="model-picker-popover"
-          role="listbox"
-          aria-label="Models"
-        >
-          <div className="model-picker-search-row">
+      {open &&
+        !isTriggerDisabled &&
+        popoverBox &&
+        createPortal(
+          <div
+            ref={popoverRef}
+            className="model-picker-popover"
+            style={{
+              position: "fixed",
+              bottom: popoverBox.bottom,
+              right: popoverBox.right,
+              width: popoverBox.width,
+              maxHeight: popoverBox.maxHeight,
+              zIndex: 2000,
+            }}
+            role="listbox"
+            aria-label="Models"
+          >
+            <div className="model-picker-search-row">
             <div className="model-picker-search">
               <svg
                 className="model-picker-search-icon"
@@ -456,7 +513,8 @@ export function ModelPicker({
                 })}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   );
