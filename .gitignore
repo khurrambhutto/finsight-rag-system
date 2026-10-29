@@ -1,40 +1,11 @@
-.DS_Store
-Thumbs.db
-
-# Environment files
-.env
-.env.*
-backend/.env
-frontend/.env
-!.env.example
-!backend/.env.example
-!frontend/.env.example
-
-# Python
-__pycache__/
-*.pyc
-*.pyo
-*.pyd
-.python-version
 .venv/
-venv/
-backend/.venv/
-*.egg-info/
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
-.coverage
-htmlcov/
-
-# Local backend runtime data
-backend/data/
-
-# Node / frontend
+.env*
+!.env.example
+__pycache__/
+*.py[cod]
 frontend/node_modules/
 frontend/dist/
-frontend/.vite/
 *.tsbuildinfo
-
-# Editors
-.idea/
-.vscode/
+data/*.db
+data/reports/*
+!data/reports/.gitkeep
