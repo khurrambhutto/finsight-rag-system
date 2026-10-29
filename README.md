@@ -1,6 +1,6 @@
 # FinSight AI
 
-FinSight AI is a financial research assistant under development. The report library accepts PDFs and extracts page-grounded passages using Docling. See [plan.md](plan.md) for the full project plan.
+FinSight AI is a financial research assistant for exploring company reports. Upload a PDF, ask questions about its contents, and get answers with citations that link to the source pages. It extracts report text and tables with Docling, searches passages with Qdrant, and generates answers using Gemini, OpenRouter, or a local Ollama model.
 
 ## Run locally
 
